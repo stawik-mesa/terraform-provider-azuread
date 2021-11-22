@@ -175,8 +175,8 @@ func (r AdministrativeUnitMemberResource) oneUser(data acceptance.TestData) stri
 %[2]s
 
 resource "azuread_administrative_unit_member" "testA" {
-  administrative_unit_object_id   = azuread_administrative_unit.test.object_id
-  member_object_id = azuread_user.testA.object_id
+  administrative_unit_object_id = azuread_administrative_unit.test.object_id
+  member_object_id              = azuread_user.testA.object_id
 }
 `, AdministrativeUnitResource{}.basic(data), r.templateThreeUsers(data))
 }
@@ -187,13 +187,13 @@ func (r AdministrativeUnitMemberResource) twoUsers(data acceptance.TestData) str
 %[2]s
 
 resource "azuread_administrative_unit_member" "testA" {
-  administrative_unit_object_id   = azuread_administrative_unit.test.object_id
-  member_object_id = azuread_user.testA.object_id
+  administrative_unit_object_id = azuread_administrative_unit.test.object_id
+  member_object_id              = azuread_user.testA.object_id
 }
 
 resource "azuread_administrative_unit_member" "testB" {
-  administrative_unit_object_id   = azuread_administrative_unit.test.object_id
-  member_object_id = azuread_user.testB.object_id
+  administrative_unit_object_id = azuread_administrative_unit.test.object_id
+  member_object_id              = azuread_user.testB.object_id
 }
 `, AdministrativeUnitResource{}.basic(data), r.templateThreeUsers(data))
 }
