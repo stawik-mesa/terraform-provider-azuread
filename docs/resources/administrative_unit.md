@@ -28,8 +28,8 @@ resource "azuread_administrative_unit" "example" {
 
 The following arguments are supported:
 
-* `display_name` - (Required) The display name of the administrative unit.
 * `description` - (Optional) The description of the administrative unit.
+* `display_name` - (Required) The display name of the administrative unit.
 * `members` - (Optional) A set of object IDs of members who should be present in this administrative unit. Supported object types are Users or Groups.
 
 !> **Warning** Do not use the `members` property at the same time as the [azuread_administrative_unit_member](https://registry.terraform.io/providers/hashicorp/azuread/latest/docs/resources/administrative_unit_member) resource for the same administrative unit. Doing so will cause a conflict and administrative unit members will be removed.
