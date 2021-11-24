@@ -157,6 +157,13 @@ type AddInKeyValue struct {
 	Value *string `json:"value,omitempty"`
 }
 
+type AdministrativeUnit struct {
+	Description *StringNullWhenEmpty          `json:"description,omitempty"`
+	DisplayName *string                       `json:"displayName,omitempty"`
+	ID          *string                       `json:"id,omitempty"`
+	Visibility  *AdministrativeUnitVisibility `json:"visibility,omitempty"`
+}
+
 type ApiPreAuthorizedApplication struct {
 	AppId         *string   `json:"appId,omitempty"`
 	PermissionIds *[]string `json:"permissionIds,omitempty"`
@@ -618,6 +625,61 @@ type CredentialUserRegistrationDetails struct {
 	UserPrincipalName *string                   `json:"UserPrincipalName,omitempty"`
 }
 
+type DelegatedPermissionGrant struct {
+	Id          *string                              `json:"id,omitempty"`
+	ClientId    *string                              `json:"clientId,omitempty"`
+	ConsentType *DelegatedPermissionGrantConsentType `json:"consentType,omitempty"`
+	PrincipalId *string                              `json:"principalId,omitempty"`
+	ResourceId  *string                              `json:"resourceId,omitempty"`
+	Scopes      *[]string                            `json:"-"`
+}
+
+func (d DelegatedPermissionGrant) MarshalJSON() ([]byte, error) {
+	var val *StringNullWhenEmpty
+	if d.Scopes != nil {
+		scopes := make([]string, 0)
+		for _, s := range *d.Scopes {
+			scopes = append(scopes, string(s))
+		}
+		theScopes := StringNullWhenEmpty(strings.Join(scopes, " "))
+		val = &theScopes
+	}
+
+	// Local type needed to avoid recursive MarshalJSON calls
+	type delegatedPermissionGrant DelegatedPermissionGrant
+	grant := struct {
+		Scopes *StringNullWhenEmpty `json:"scope,omitempty"`
+		*delegatedPermissionGrant
+	}{
+		Scopes:                   val,
+		delegatedPermissionGrant: (*delegatedPermissionGrant)(&d),
+	}
+	buf, err := json.Marshal(&grant)
+	return buf, err
+}
+
+func (d *DelegatedPermissionGrant) UnmarshalJSON(data []byte) error {
+	// Local type needed to avoid recursive UnmarshalJSON calls
+	type delegatedPermissionGrant DelegatedPermissionGrant
+	grant := struct {
+		Scopes *string `json:"scope"`
+		*delegatedPermissionGrant
+	}{
+		delegatedPermissionGrant: (*delegatedPermissionGrant)(d),
+	}
+	if err := json.Unmarshal(data, &grant); err != nil {
+		return err
+	}
+	if grant.Scopes != nil {
+		var scopes []string
+		for _, s := range strings.Split(*grant.Scopes, " ") {
+			scopes = append(scopes, strings.TrimSpace(s))
+		}
+		d.Scopes = &scopes
+	}
+	return nil
+}
+
 type DeviceDetail struct {
 	Browser         *string `json:"browser,omitempty"`
 	DeviceId        *string `json:"deviceId,omitempty"`
@@ -860,6 +922,12 @@ type GroupOnPremisesProvisioningError struct {
 	OccurredDateTime     time.Time `json:"occurredDateTime,omitempty"`
 	PropertyCausingError *string   `json:"propertyCausingError,omitempty"`
 	Value                *string   `json:"value,omitempty"`
+}
+
+type Identity struct {
+	DisplayName *string `json:"displayName,omitempty"`
+	Id          *string `json:"id,omitempty"`
+	TenantId    *string `json:"tenantId,omitempty"`
 }
 
 type IdentityProvider struct {
@@ -1127,6 +1195,13 @@ func (se SchemaExtensionData) MarshalJSON() ([]byte, error) {
 		se.ID: se.Properties,
 	}
 	return json.Marshal(in)
+}
+
+type ScopedRoleMembership struct {
+	AdministrativeUnitId *string   `json:"administrativeUnitId,omitempty"`
+	Id                   *string   `json:"id,omitempty"`
+	RoleId               *string   `json:"roleId,omitempty"`
+	RoleMemberInfo       *Identity `json:"roleMemberInfo"`
 }
 
 // ServicePrincipal describes a Service Principal object.
