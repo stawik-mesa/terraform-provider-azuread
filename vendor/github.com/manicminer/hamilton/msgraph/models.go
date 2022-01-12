@@ -157,6 +157,13 @@ type AddInKeyValue struct {
 	Value *string `json:"value,omitempty"`
 }
 
+type AdministrativeUnit struct {
+	Description *StringNullWhenEmpty          `json:"description,omitempty"`
+	DisplayName *string                       `json:"displayName,omitempty"`
+	ID          *string                       `json:"id,omitempty"`
+	Visibility  *AdministrativeUnitVisibility `json:"visibility,omitempty"`
+}
+
 type ApiPreAuthorizedApplication struct {
 	AppId         *string   `json:"appId,omitempty"`
 	PermissionIds *[]string `json:"permissionIds,omitempty"`
@@ -518,8 +525,8 @@ type BaseNamedLocation struct {
 }
 
 type CloudAppSecurityControl struct {
-	IsEnabled            *bool   `json:"isEnabled,omitempty"`
-	CloudAppSecurityType *string `json:"cloudAppSecurityType,omitempty"`
+	IsEnabled            *bool                                                `json:"isEnabled,omitempty"`
+	CloudAppSecurityType *ConditionalAccessCloudAppSecuritySessionControlType `json:"cloudAppSecurityType,omitempty"`
 }
 
 type ConditionalAccessApplications struct {
@@ -529,20 +536,38 @@ type ConditionalAccessApplications struct {
 }
 
 type ConditionalAccessConditionSet struct {
-	Applications     *ConditionalAccessApplications `json:"applications,omitempty"`
-	Users            *ConditionalAccessUsers        `json:"users,omitempty"`
-	ClientAppTypes   *[]string                      `json:"clientAppTypes,omitempty"`
-	Locations        *ConditionalAccessLocations    `json:"locations,omitempty"`
-	Platforms        *ConditionalAccessPlatforms    `json:"platforms,omitempty"`
-	SignInRiskLevels *[]string                      `json:"signInRiskLevels,omitempty"`
-	UserRiskLevels   *[]string                      `json:"userRiskLevels,omitempty"`
+	Applications     *ConditionalAccessApplications    `json:"applications,omitempty"`
+	ClientAppTypes   *[]ConditionalAccessClientAppType `json:"clientAppTypes,omitempty"`
+	Devices          *ConditionalAccessDevices         `json:"devices,omitempty"`
+	DeviceStates     *ConditionalAccessDeviceStates    `json:"deviceStates,omitempty"`
+	Locations        *ConditionalAccessLocations       `json:"locations,omitempty"`
+	Platforms        *ConditionalAccessPlatforms       `json:"platforms,omitempty"`
+	SignInRiskLevels *[]ConditionalAccessRiskLevel     `json:"signInRiskLevels,omitempty"`
+	UserRiskLevels   *[]ConditionalAccessRiskLevel     `json:"userRiskLevels,omitempty"`
+	Users            *ConditionalAccessUsers           `json:"users,omitempty"`
+}
+
+type ConditionalAccessDevices struct {
+	IncludeDevices *[]string                `json:"includeDevices,omitempty"`
+	ExcludeDevices *[]string                `json:"excludeDevices,omitempty"`
+	DeviceFilter   *ConditionalAccessFilter `json:"deviceFilter,omitempty"`
+}
+
+type ConditionalAccessDeviceStates struct {
+	IncludeStates *ConditionalAccessDeviceStatesInclude `json:"includeStates,omitempty"`
+	ExcludeStates *ConditionalAccessDeviceStatesExclude `json:"excludeStates,omitempty"`
+}
+
+type ConditionalAccessFilter struct {
+	Mode *ConditionalAccessFilterMode `json:"mode,omitempty"`
+	Rule *string                      `json:"rule,omitempty"`
 }
 
 type ConditionalAccessGrantControls struct {
-	Operator                    *string   `json:"operator,omitempty"`
-	BuiltInControls             *[]string `json:"builtInControls,omitempty"`
-	CustomAuthenticationFactors *[]string `json:"customAuthenticationFactors,omitempty"`
-	TermsOfUse                  *[]string `json:"termsOfUse,omitempty"`
+	Operator                    *string                          `json:"operator,omitempty"`
+	BuiltInControls             *[]ConditionalAccessGrantControl `json:"builtInControls,omitempty"`
+	CustomAuthenticationFactors *[]string                        `json:"customAuthenticationFactors,omitempty"`
+	TermsOfUse                  *[]string                        `json:"termsOfUse,omitempty"`
 }
 
 type ConditionalAccessLocations struct {
@@ -551,8 +576,8 @@ type ConditionalAccessLocations struct {
 }
 
 type ConditionalAccessPlatforms struct {
-	IncludePlatforms *[]string `json:"includePlatforms,omitempty"`
-	ExcludePlatforms *[]string `json:"excludePlatforms,omitempty"`
+	IncludePlatforms *[]ConditionalAccessDevicePlatform `json:"includePlatforms,omitempty"`
+	ExcludePlatforms *[]ConditionalAccessDevicePlatform `json:"excludePlatforms,omitempty"`
 }
 
 // ConditionalAccessPolicy describes an Conditional Access Policy object.
@@ -616,6 +641,61 @@ type CredentialUserRegistrationDetails struct {
 	IsRegistered      *bool                     `json:"isRegistered,omitempty"`
 	UserDisplayName   *string                   `json:"userDisplayName,omitempty"`
 	UserPrincipalName *string                   `json:"UserPrincipalName,omitempty"`
+}
+
+type DelegatedPermissionGrant struct {
+	Id          *string                              `json:"id,omitempty"`
+	ClientId    *string                              `json:"clientId,omitempty"`
+	ConsentType *DelegatedPermissionGrantConsentType `json:"consentType,omitempty"`
+	PrincipalId *string                              `json:"principalId,omitempty"`
+	ResourceId  *string                              `json:"resourceId,omitempty"`
+	Scopes      *[]string                            `json:"-"`
+}
+
+func (d DelegatedPermissionGrant) MarshalJSON() ([]byte, error) {
+	var val *StringNullWhenEmpty
+	if d.Scopes != nil {
+		scopes := make([]string, 0)
+		for _, s := range *d.Scopes {
+			scopes = append(scopes, string(s))
+		}
+		theScopes := StringNullWhenEmpty(strings.Join(scopes, " "))
+		val = &theScopes
+	}
+
+	// Local type needed to avoid recursive MarshalJSON calls
+	type delegatedPermissionGrant DelegatedPermissionGrant
+	grant := struct {
+		Scopes *StringNullWhenEmpty `json:"scope,omitempty"`
+		*delegatedPermissionGrant
+	}{
+		Scopes:                   val,
+		delegatedPermissionGrant: (*delegatedPermissionGrant)(&d),
+	}
+	buf, err := json.Marshal(&grant)
+	return buf, err
+}
+
+func (d *DelegatedPermissionGrant) UnmarshalJSON(data []byte) error {
+	// Local type needed to avoid recursive UnmarshalJSON calls
+	type delegatedPermissionGrant DelegatedPermissionGrant
+	grant := struct {
+		Scopes *string `json:"scope"`
+		*delegatedPermissionGrant
+	}{
+		delegatedPermissionGrant: (*delegatedPermissionGrant)(d),
+	}
+	if err := json.Unmarshal(data, &grant); err != nil {
+		return err
+	}
+	if grant.Scopes != nil {
+		var scopes []string
+		for _, s := range strings.Split(*grant.Scopes, " ") {
+			scopes = append(scopes, strings.TrimSpace(s))
+		}
+		d.Scopes = &scopes
+	}
+	return nil
 }
 
 type DeviceDetail struct {
@@ -719,6 +799,15 @@ type ExtensionSchemaProperty struct {
 	Type ExtensionSchemaPropertyDataType `json:"type,omitempty"`
 }
 
+type FederatedIdentityCredential struct {
+	Audiences   *[]string            `json:"audiences,omitempty"`
+	Description *StringNullWhenEmpty `json:"description,omitempty"`
+	ID          *string              `json:"id,omitempty"`
+	Issuer      *string              `json:"issuer,omitempty"`
+	Name        *string              `json:"name,omitempty"`
+	Subject     *string              `json:"subject,omitempty"`
+}
+
 type Fido2AuthenticationMethod struct {
 	ID                      *string           `json:"id,omitempty"`
 	DisplayName             *string           `json:"displayName,omitempty"`
@@ -761,8 +850,8 @@ type Group struct {
 	Mail                          *string                             `json:"mail,omitempty"`
 	MailEnabled                   *bool                               `json:"mailEnabled,omitempty"`
 	MailNickname                  *string                             `json:"mailNickname,omitempty"`
-	MembershipRule                *string                             `json:"membershipRule,omitempty"`
-	MembershipRuleProcessingState *string                             `json:"membershipRuleProcessingState,omitempty"`
+	MembershipRule                *StringNullWhenEmpty                `json:"membershipRule,omitempty"`
+	MembershipRuleProcessingState *GroupMembershipRuleProcessingState `json:"membershipRuleProcessingState,omitempty"`
 	OnPremisesDomainName          *string                             `json:"onPremisesDomainName,omitempty"`
 	OnPremisesLastSyncDateTime    *time.Time                          `json:"onPremisesLastSyncDateTime,omitempty"`
 	OnPremisesNetBiosName         *string                             `json:"onPremisesNetBiosName,omitempty"`
@@ -847,7 +936,7 @@ func (g *Group) HasTypes(types []GroupType) bool {
 
 type GroupAssignedLabel struct {
 	LabelId     *string `json:"labelId,omitempty"`
-	DisplayName *string `json:"displayNanme,omitempty"`
+	DisplayName *string `json:"displayName,omitempty"`
 }
 
 type GroupAssignedLicense struct {
@@ -860,6 +949,12 @@ type GroupOnPremisesProvisioningError struct {
 	OccurredDateTime     time.Time `json:"occurredDateTime,omitempty"`
 	PropertyCausingError *string   `json:"propertyCausingError,omitempty"`
 	Value                *string   `json:"value,omitempty"`
+}
+
+type Identity struct {
+	DisplayName *string `json:"displayName,omitempty"`
+	Id          *string `json:"id,omitempty"`
+	TenantId    *string `json:"tenantId,omitempty"`
 }
 
 type IdentityProvider struct {
@@ -1071,8 +1166,8 @@ type PermissionScope struct {
 }
 
 type PersistentBrowserSessionControl struct {
-	IsEnabled *bool   `json:"isEnabled,omitempty"`
-	Mode      *string `json:"mode,omitempty"`
+	IsEnabled *bool                         `json:"isEnabled,omitempty"`
+	Mode      *PersistentBrowserSessionMode `json:"mode,omitempty"`
 }
 
 type PhoneAuthenticationMethod struct {
@@ -1127,6 +1222,13 @@ func (se SchemaExtensionData) MarshalJSON() ([]byte, error) {
 		se.ID: se.Properties,
 	}
 	return json.Marshal(in)
+}
+
+type ScopedRoleMembership struct {
+	AdministrativeUnitId *string   `json:"administrativeUnitId,omitempty"`
+	Id                   *string   `json:"id,omitempty"`
+	RoleId               *string   `json:"roleId,omitempty"`
+	RoleMemberInfo       *Identity `json:"roleMemberInfo"`
 }
 
 // ServicePrincipal describes a Service Principal object.

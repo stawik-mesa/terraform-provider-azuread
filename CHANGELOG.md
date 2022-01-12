@@ -1,8 +1,50 @@
-## 2.11.0 (Unreleased)
+## 2.14.0 (January 07, 2022)
+
+FEATURES:
+
+* **New Resource:** `azuread_application_federated_identity_credential` ([#705](https://github.com/terraform-providers/terraform-provider-azuread/issues/705))
+
+IMPROVEMENTS:
+
+* `azuread_service_principal_password`: re-add support for `display_name`, `start_date`, `end_date` and `end_date_relative` properties ([#706](https://github.com/terraform-providers/terraform-provider-azuread/issues/706))
+
+## 2.13.0 (December 15, 2021)
+
+IMPROVEMENTS:
+
+* `azuread_group`: support for `dynamic_memberships` ([#695](https://github.com/terraform-providers/terraform-provider-azuread/issues/695))
+
+## 2.12.0 (December 03, 2021)
+
+IMPROVEMENTS:
+
+* `azuread_conditional_access_policy` - support the `persistent_browser_mode` in the `session_controls` block ([#677](https://github.com/terraform-providers/terraform-provider-azuread/issues/677))
+
+BUG FIXES:
+
+* `azuread_application` - allow URNs to be used in `redirect_uris` in the `public_client` block ([#684](https://github.com/terraform-providers/terraform-provider-azuread/issues/684))
+* `azuread_service_principal_delegated_permission_grant` - add missing support for importing this resource ([#685](https://github.com/terraform-providers/terraform-provider-azuread/issues/685))
+
+## 2.11.0 (November 25, 2021)
 
 BREAKING CHANGES:
 
-* **Provider:** support for the German national cloud, which was [closed down as of October 29, 2021](https://www.microsoft.com/en-us/cloud-platform/germany-cloud-regions), has been removed in this release [GH-670]
+* **Provider:** support for the German national cloud, which was [closed down as of October 29, 2021](https://www.microsoft.com/en-us/cloud-platform/germany-cloud-regions), has been removed in this release ([#670](https://github.com/terraform-providers/terraform-provider-azuread/issues/670))
+
+FEATURES:
+
+* **New Data Source:** `azuread_administrative_unit` ([#672](https://github.com/terraform-providers/terraform-provider-azuread/issues/672))
+* **New Resource:** `azuread_administrative_unit` ([#672](https://github.com/terraform-providers/terraform-provider-azuread/issues/672))
+* **New Resource:** `azuread_administrative_unit_member` ([#672](https://github.com/terraform-providers/terraform-provider-azuread/issues/672))
+* **New Resource:** `azuread_service_principal_delegated_permission_grant` ([#676](https://github.com/terraform-providers/terraform-provider-azuread/issues/676))
+
+IMPROVEMENTS:
+
+* `azuread_conditional_access_policy` - support the `devices` block ([#673](https://github.com/terraform-providers/terraform-provider-azuread/issues/673))
+
+BUG FIXES:
+
+* `azuread_conditional_access_policy` - fix a bug when removing the `session_controls` block from a policy ([#673](https://github.com/terraform-providers/terraform-provider-azuread/issues/673))
 
 ## 2.10.0 (November 19, 2021)
 
