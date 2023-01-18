@@ -125,6 +125,11 @@ func flattenConditionalAccessSessionControls(in *msgraph.ConditionalAccessSessio
 		cloudAppSecurity = *in.CloudAppSecurity.CloudAppSecurityType
 	}
 
+	disableResilienceDefaults := false
+	if in.DisableResilienceDefaults != nil {
+		disableResilienceDefaults = *in.DisableResilienceDefaults.IsEnabled
+	}
+
 	signInFrequency := 0
 	signInFrequencyPeriod := ""
 	if in.SignInFrequency != nil && in.SignInFrequency.Value != nil && in.SignInFrequency.Type != nil {
@@ -141,6 +146,7 @@ func flattenConditionalAccessSessionControls(in *msgraph.ConditionalAccessSessio
 		map[string]interface{}{
 			"application_enforced_restrictions_enabled": applicationEnforceRestrictions,
 			"cloud_app_security_policy":                 cloudAppSecurity,
+			"disable_resilience_defaults_enabled":       disableResilienceDefaults,
 			"persistent_browser_mode":                   persistentBrowserMode,
 			"sign_in_frequency":                         signInFrequency,
 			"sign_in_frequency_period":                  signInFrequencyPeriod,
@@ -378,6 +384,10 @@ func expandConditionalAccessSessionControls(in []interface{}) *msgraph.Condition
 			IsEnabled:            utils.Bool(true),
 			CloudAppSecurityType: utils.String(cloudAppSecurity),
 		}
+	}
+
+	result.DisableResilienceDefaults = &msgraph.DisableResilienceDefaultsSessionControl{
+		IsEnabled: utils.Bool(config["disable_resilience_defaults_enabled"].(bool)),
 	}
 
 	if persistentBrowserMode := config["persistent_browser_mode"].(string); persistentBrowserMode != "" {

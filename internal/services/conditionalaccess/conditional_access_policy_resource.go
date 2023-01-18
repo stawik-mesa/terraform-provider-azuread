@@ -403,6 +403,11 @@ func conditionalAccessPolicyResource() *schema.Resource {
 							}, false),
 						},
 
+						"disable_resilience_defaults_enabled": {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
+
 						"persistent_browser_mode": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -464,6 +469,9 @@ func conditionalAccessPolicyDiffSuppress(k, old, new string, d *schema.ResourceD
 				suppress = false
 			}
 			if v, ok := sessionControls["cloud_app_security_policy"]; ok && v.(string) != "" {
+				suppress = false
+			}
+			if v, ok := sessionControls["disableResilienceDefaults"]; ok && v.(bool) {
 				suppress = false
 			}
 			if v, ok := sessionControls["persistent_browser_mode"]; ok && v.(string) != "" {
