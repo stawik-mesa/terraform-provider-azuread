@@ -33,7 +33,7 @@ const (
 
 	KeyVaultPublicEndpoint ApiEndpoint = "https://vault.azure.net"
 	KeyVaultChinaEndpoint  ApiEndpoint = "https://vault.azure.cn"
-	KeyVaultUSGovEndpoint  ApiEndpoint = "https://vault.microsoftazure.us"
+	KeyVaultUSGovEndpoint  ApiEndpoint = "https://vault.usgovcloudapi.net"
 
 	OperationalInsightsPublicEndpoint ApiEndpoint = "https://api.loganalytics.io"
 	OperationalInsightsUSGovEndpoint  ApiEndpoint = "https://api.loganalytics.us"
@@ -57,4 +57,5 @@ const (
 	StoragePublicEndpoint ApiEndpoint = "https://storage.azure.com"
 
 	SynapsePublicEndpoint ApiEndpoint = "https://dev.azuresynapse.net"
+	SynapseUSGovEndpoint ApiEndpoint = "https://dev.azuresynapse.usgovcloudapi.net"
 )

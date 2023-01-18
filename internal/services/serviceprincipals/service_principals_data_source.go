@@ -118,6 +118,12 @@ func servicePrincipalsDataSource() *schema.Resource {
 							Computed:    true,
 						},
 
+						"object_id": {
+							Description: "The object ID of the service principal",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+
 						"preferred_single_sign_on_mode": {
 							Description: "The single sign-on mode configured for this application. Azure AD uses the preferred single sign-on mode to launch the application from Microsoft 365 or the Azure AD My Apps",
 							Type:        schema.TypeString,
@@ -270,11 +276,11 @@ func servicePrincipalsDataSourceRead(ctx context.Context, d *schema.ResourceData
 	objectIds := make([]string, 0)
 	spList := make([]map[string]interface{}, 0)
 	for _, s := range servicePrincipals {
-		if s.ID == nil || s.DisplayName == nil {
+		if s.ID() == nil || s.DisplayName == nil {
 			return tf.ErrorDiagF(errors.New("API returned service principal with nil object ID or displayName"), "Bad API Response")
 		}
 
-		objectIds = append(objectIds, *s.ID)
+		objectIds = append(objectIds, *s.ID())
 		displayNames = append(displayNames, *s.DisplayName)
 		if s.AppId != nil {
 			applicationIds = append(applicationIds, *s.AppId)
@@ -296,6 +302,7 @@ func servicePrincipalsDataSourceRead(ctx context.Context, d *schema.ResourceData
 		sp["app_role_assignment_required"] = s.AppRoleAssignmentRequired
 		sp["application_id"] = s.AppId
 		sp["application_tenant_id"] = s.AppOwnerOrganizationId
+		sp["object_id"] = s.ID()
 		sp["preferred_single_sign_on_mode"] = s.PreferredSingleSignOnMode
 		sp["saml_metadata_url"] = s.SamlMetadataUrl
 		sp["service_principal_names"] = servicePrincipalNames

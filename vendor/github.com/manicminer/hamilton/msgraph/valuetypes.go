@@ -22,10 +22,18 @@ func (s StringNullWhenEmpty) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(s))
 }
 
+type AccessPackageCatalogState = string
+
+const (
+	AccessPackageCatalogStatePublished   AccessPackageCatalogState = "published"
+	AccessPackageCatalogStateUnpublished AccessPackageCatalogState = "unpublished"
+)
+
 type AccessPackageCatalogStatus = string
 
 const (
-	AccessPackageCatalogStatusPublished AccessPackageCatalogStatus = "Published"
+	AccessPackageCatalogStatusPublished   AccessPackageCatalogStatus = "Published"
+	AccessPackageCatalogStatusUnpublished AccessPackageCatalogState  = "Unpublished"
 )
 
 type AccessPackageCatalogType = string
@@ -61,6 +69,31 @@ type AccessPackageResourceType = string
 const (
 	AccessPackageResourceTypeApplication          AccessPackageResourceType = "Application"
 	AccessPackageResourceTypeSharePointOnlineSite AccessPackageResourceType = "SharePoint Online Site"
+)
+
+type AccessReviewTimeoutBehaviorType = string
+
+const (
+	AccessReviewTimeoutBehaviorTypeAcceptAccessRecommendation AccessReviewTimeoutBehaviorType = "acceptAccessRecommendation"
+	AccessReviewTimeoutBehaviorTypeKeepAccess                 AccessReviewTimeoutBehaviorType = "keepAccess"
+	AccessReviewTimeoutBehaviorTypeRemoveAccess               AccessReviewTimeoutBehaviorType = "removeAccess"
+)
+
+type AccessReviewReviewerType = string
+
+const (
+	AccessReviewReviewerTypeSelf      AccessReviewReviewerType = "Self"
+	AccessReviewReviewerTypeReviewers AccessReviewReviewerType = "Reviewers"
+)
+
+type AccessReviewRecurranceType = string
+
+const (
+	AccessReviewRecurranceTypeWeekly     AccessReviewRecurranceType = "weekly"
+	AccessReviewRecurranceTypeMonthly    AccessReviewRecurranceType = "monthly"
+	AccessReviewRecurranceTypeQuarterly  AccessReviewRecurranceType = "quarterly"
+	AccessReviewRecurranceTypeHalfYearly AccessReviewRecurranceType = "halfyearly"
+	AccessReviewRecurranceTypeAnnual     AccessReviewRecurranceType = "annual"
 )
 
 type AdministrativeUnitVisibility = string
@@ -227,6 +260,7 @@ const (
 	ConditionalAccessDevicePlatformAll                ConditionalAccessDevicePlatform = "all"
 	ConditionalAccessDevicePlatformAndroid            ConditionalAccessDevicePlatform = "android"
 	ConditionalAccessDevicePlatformIos                ConditionalAccessDevicePlatform = "iOS"
+	ConditionalAccessDevicePlatformLinux              ConditionalAccessDevicePlatform = "linux"
 	ConditionalAccessDevicePlatformMacOs              ConditionalAccessDevicePlatform = "macOS"
 	ConditionalAccessDevicePlatformUnknownFutureValue ConditionalAccessDevicePlatform = "unknownFutureValue"
 	ConditionalAccessDevicePlatformWindows            ConditionalAccessDevicePlatform = "windows"
@@ -283,6 +317,14 @@ const (
 	ConditionalAccessRiskLevelMedium             ConditionalAccessRiskLevel = "medium"
 	ConditionalAccessRiskLevelNone               ConditionalAccessRiskLevel = "none"
 	ConditionalAccessRiskLevelUnknownFutureValue ConditionalAccessRiskLevel = "unknownFutureValue"
+)
+
+type ConnectedOrganizationState = string
+
+const (
+	ConnectedOrganizationStateProposed           ConnectedOrganizationState = "proposed"
+	ConnectedOrganizationStateConfigured         ConnectedOrganizationState = "configured"
+	ConnectedOrganizationStateUnknownFutureValue ConnectedOrganizationState = "unknownFutureValue"
 )
 
 type DelegatedPermissionGrantConsentType = string
@@ -351,10 +393,11 @@ const (
 type GroupResourceBehaviorOption = string
 
 const (
-	GroupResourceBehaviorOptionAllowOnlyMembersToPost   GroupResourceBehaviorOption = "AllowOnlyMembersToPost"
-	GroupResourceBehaviorOptionHideGroupInOutlook       GroupResourceBehaviorOption = "HideGroupInOutlook"
-	GroupResourceBehaviorOptionSubscribeNewGroupMembers GroupResourceBehaviorOption = "SubscribeNewGroupMembers"
-	GroupResourceBehaviorOptionWelcomeEmailDisabled     GroupResourceBehaviorOption = "WelcomeEmailDisabled"
+	GroupResourceBehaviorOptionAllowOnlyMembersToPost                   GroupResourceBehaviorOption = "AllowOnlyMembersToPost"
+	GroupResourceBehaviorOptionHideGroupInOutlook                       GroupResourceBehaviorOption = "HideGroupInOutlook"
+	GroupResourceBehaviorOptionSubscribeMembersToCalendarEventsDisabled GroupResourceBehaviorOption = "SubscribeMembersToCalendarEventsDisabled"
+	GroupResourceBehaviorOptionSubscribeNewGroupMembers                 GroupResourceBehaviorOption = "SubscribeNewGroupMembers"
+	GroupResourceBehaviorOptionWelcomeEmailDisabled                     GroupResourceBehaviorOption = "WelcomeEmailDisabled"
 )
 
 type GroupResourceProvisioningOption = string
@@ -403,6 +446,14 @@ type KeyCredentialUsage = string
 const (
 	KeyCredentialUsageSign   KeyCredentialUsage = "Sign"
 	KeyCredentialUsageVerify KeyCredentialUsage = "Verify"
+)
+
+type OnPremisesGroupType = string
+
+const (
+	UniversalDistributionGroup        OnPremisesGroupType = "UniversalDistributionGroup"
+	UniversalMailEnabledSecurityGroup OnPremisesGroupType = "UniversalMailEnabledSecurityGroup"
+	UniversalSecurityGroup            OnPremisesGroupType = "UniversalSecurityGroup"
 )
 
 type Members []DirectoryObject
@@ -591,4 +642,12 @@ const (
 	IncludedUserTypesAll    IncludedUserTypes = "all"
 	IncludedUserTypesMember IncludedUserTypes = "member"
 	IncludedUserTypesGuest  IncludedUserTypes = "guest"
+)
+
+type UserflowAttributeDataType = string
+
+const (
+	UserflowAttributeDataTypeString  UserflowAttributeDataType = "string"
+	UserflowAttributeDataTypeBoolean UserflowAttributeDataType = "boolean"
+	UserflowAttributeDataTypeInt64   UserflowAttributeDataType = "int64"
 )

@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -67,8 +66,13 @@ type ClientCredentialsConfig struct {
 	PrivateKey []byte
 
 	// Certificate contains the (optionally PEM encoded) X509 certificate registered
-	// for the application with which you are authenticating.
+	// for the application with which you are authenticating. Used when FederatedAssertion is empty.
 	Certificate []byte
+
+	// FederatedAssertion contains a JWT provided by a trusted third-party vendor
+	// for obtaining an access token with a federated credential. When empty, an
+	// assertion will be created and signed using the specified PrivateKey and Certificate
+	FederatedAssertion string
 
 	// Resource specifies an API resource for which to request access (used for v1 tokens)
 	Resource string
@@ -183,7 +187,7 @@ type clientAssertionAuthorizer struct {
 	conf *ClientCredentialsConfig
 }
 
-func (a *clientAssertionAuthorizer) token(tokenUrl string) (*oauth2.Token, error) {
+func (a *clientAssertionAuthorizer) assertion(tokenUrl string) (*string, error) {
 	crt := a.conf.Certificate
 	if der, _ := pem.Decode(a.conf.Certificate); der != nil {
 		crt = der.Bytes
@@ -222,6 +226,22 @@ func (a *clientAssertionAuthorizer) token(tokenUrl string) (*oauth2.Token, error
 	assertion, err := t.encode(privKey)
 	if err != nil {
 		return nil, fmt.Errorf("clientAssertionAuthorizer: failed to encode and sign JWT assertion")
+	}
+
+	return &assertion, nil
+}
+
+func (a *clientAssertionAuthorizer) token(tokenUrl string) (*oauth2.Token, error) {
+	assertion := a.conf.FederatedAssertion
+	if assertion == "" {
+		a, err := a.assertion(tokenUrl)
+		if err != nil {
+			return nil, err
+		}
+		if a == nil {
+			return nil, fmt.Errorf("clientAssertionAuthorizer: assertion was nil")
+		}
+		assertion = *a
 	}
 
 	v := url.Values{
@@ -389,7 +409,7 @@ func clientCredentialsToken(ctx context.Context, endpoint string, params *url.Va
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return nil, fmt.Errorf("clientCredentialsToken: cannot parse response: %v", err)
 	}

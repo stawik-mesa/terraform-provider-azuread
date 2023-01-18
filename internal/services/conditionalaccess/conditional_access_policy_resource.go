@@ -76,8 +76,9 @@ func conditionalAccessPolicyResource() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"included_applications": {
-										Type:     schema.TypeList,
-										Required: true,
+										Type:         schema.TypeList,
+										Optional:     true,
+										ExactlyOneOf: []string{"conditions.0.applications.0.included_applications", "conditions.0.applications.0.included_user_actions"},
 										Elem: &schema.Schema{
 											Type:             schema.TypeString,
 											ValidateDiagFunc: validate.NoEmptyStrings,
@@ -94,8 +95,9 @@ func conditionalAccessPolicyResource() *schema.Resource {
 									},
 
 									"included_user_actions": {
-										Type:     schema.TypeList,
-										Optional: true,
+										Type:         schema.TypeList,
+										Optional:     true,
+										ExactlyOneOf: []string{"conditions.0.applications.0.included_applications", "conditions.0.applications.0.included_user_actions"},
 										Elem: &schema.Schema{
 											Type:             schema.TypeString,
 											ValidateDiagFunc: validate.NoEmptyStrings,
@@ -222,7 +224,7 @@ func conditionalAccessPolicyResource() *schema.Resource {
 
 						"locations": {
 							Type:     schema.TypeList,
-							Required: true,
+							Optional: true,
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -249,7 +251,7 @@ func conditionalAccessPolicyResource() *schema.Resource {
 
 						"platforms": {
 							Type:     schema.TypeList,
-							Required: true,
+							Optional: true,
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -262,6 +264,7 @@ func conditionalAccessPolicyResource() *schema.Resource {
 												msgraph.ConditionalAccessDevicePlatformAll,
 												msgraph.ConditionalAccessDevicePlatformAndroid,
 												msgraph.ConditionalAccessDevicePlatformIos,
+												msgraph.ConditionalAccessDevicePlatformLinux,
 												msgraph.ConditionalAccessDevicePlatformMacOs,
 												msgraph.ConditionalAccessDevicePlatformUnknownFutureValue,
 												msgraph.ConditionalAccessDevicePlatformWindows,
@@ -279,6 +282,7 @@ func conditionalAccessPolicyResource() *schema.Resource {
 												msgraph.ConditionalAccessDevicePlatformAll,
 												msgraph.ConditionalAccessDevicePlatformAndroid,
 												msgraph.ConditionalAccessDevicePlatformIos,
+												msgraph.ConditionalAccessDevicePlatformLinux,
 												msgraph.ConditionalAccessDevicePlatformMacOs,
 												msgraph.ConditionalAccessDevicePlatformUnknownFutureValue,
 												msgraph.ConditionalAccessDevicePlatformWindows,
@@ -324,6 +328,7 @@ func conditionalAccessPolicyResource() *schema.Resource {
 					},
 				},
 			},
+
 			"grant_controls": {
 				Type:     schema.TypeList,
 				Required: true,
@@ -374,6 +379,7 @@ func conditionalAccessPolicyResource() *schema.Resource {
 					},
 				},
 			},
+
 			"session_controls": {
 				Type:             schema.TypeList,
 				Optional:         true,
@@ -451,7 +457,7 @@ func conditionalAccessPolicyDiffSuppress(k, old, new string, d *schema.ResourceD
 	switch {
 	case k == "session_controls.#" && old == "0" && new == "1":
 		sessionControlsRaw := d.Get("session_controls").([]interface{})
-		if len(sessionControlsRaw) == 1 {
+		if len(sessionControlsRaw) == 1 && sessionControlsRaw[0] != nil {
 			sessionControls := sessionControlsRaw[0].(map[string]interface{})
 			suppress = true
 			if v, ok := sessionControls["application_enforced_restrictions_enabled"]; ok && v.(bool) {

@@ -34,6 +34,22 @@ func TestAccGroup_basic(t *testing.T) {
 	})
 }
 
+func TestAccGroup_basicUnified(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_group", "test_unified")
+	r := GroupResource{}
+
+	data.ResourceTest(t, r, []resource.TestStep{
+		{
+			Config: r.basicUnified(data),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("display_name").HasValue(fmt.Sprintf("acctestGroup-%d", data.RandomInteger)),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
 func TestAccGroup_complete(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azuread_group", "test")
 	r := GroupResource{}
@@ -339,6 +355,35 @@ func TestAccGroup_provisioning(t *testing.T) {
 	})
 }
 
+func TestAccGroup_unifiedExtraSettings(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_group", "test")
+	r := GroupResource{}
+
+	data.ResourceTest(t, r, []resource.TestStep{
+		{
+			Config: r.unifiedWithExtraSettings(data),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+		{
+			Config: r.unifiedAsUser(data),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+		{
+			Config: r.unifiedWithExtraSettings(data),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
 func TestAccGroup_visibility(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azuread_group", "test")
 	r := GroupResource{}
@@ -372,7 +417,7 @@ func (r GroupResource) Exists(ctx context.Context, clients *clients.Client, stat
 		}
 		return nil, fmt.Errorf("failed to retrieve Group with object ID %q: %+v", state.ID, err)
 	}
-	return utils.Bool(group.ID != nil && *group.ID == state.ID), nil
+	return utils.Bool(group.ID() != nil && *group.ID() == state.ID), nil
 }
 
 func (GroupResource) templateDiverseDirectoryObjects(data acceptance.TestData) string {
@@ -438,6 +483,18 @@ resource "azuread_group" "test" {
 `, data.RandomInteger)
 }
 
+func (GroupResource) basicUnified(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+resource "azuread_group" "test_unified" {
+  display_name     = "acctestGroup-%[1]d"
+  types            = ["Unified"]
+  mail_enabled     = true
+  mail_nickname    = "acctestGroup-%[1]d"
+  security_enabled = false
+}
+`, data.RandomInteger)
+}
+
 func (GroupResource) unified(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 resource "azuread_group" "test" {
@@ -452,11 +509,48 @@ resource "azuread_group" "test" {
 `, data.RandomInteger)
 }
 
+func (r GroupResource) unifiedAsUser(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azuread" {
+  client_id = ""
+  use_cli   = true
+}
+
+%[1]s
+`, r.unified(data))
+}
+
+func (GroupResource) unifiedWithExtraSettings(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azuread" {
+  client_id = ""
+  use_cli   = true
+}
+
+resource "azuread_group" "test" {
+  display_name     = "acctestGroup-%[1]d"
+  description      = "Please delete me as this is a.test.AD group!"
+  types            = ["Unified"]
+  mail_enabled     = true
+  mail_nickname    = "acctestGroup-%[1]d"
+  security_enabled = true
+  theme            = "Pink"
+
+  auto_subscribe_new_members = true
+  external_senders_allowed   = true
+  hide_from_address_lists    = true
+  hide_from_outlook_clients  = true
+}
+`, data.RandomInteger)
+}
+
 func (GroupResource) complete(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 data "azuread_domains" "test" {
   only_initial = true
 }
+
+data "azuread_client_config" "test" {}
 
 resource "azuread_user" "test" {
   user_principal_name = "acctestGroup.%[1]d@${data.azuread_domains.test.domains.0.domain_name}"
@@ -467,7 +561,7 @@ resource "azuread_user" "test" {
 resource "azuread_group" "test" {
   description      = "Please delete me as this is a.test.AD group!"
   display_name     = "acctestGroup-complete-%[1]d"
-  types            = ["DynamicMembership", "Unified"]
+  types            = ["Unified"]
   mail_enabled     = true
   mail_nickname    = "acctestGroup-%[1]d"
   security_enabled = true

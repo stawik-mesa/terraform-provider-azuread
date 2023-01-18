@@ -28,7 +28,7 @@ resource "azuread_conditional_access_policy" "example" {
 
     applications {
       included_applications = ["All"]
-      excluded_applications = ["00000004-0000-0ff1-ce00-000000000000"]
+      excluded_applications = []
     }
 
     devices {
@@ -60,20 +60,10 @@ resource "azuread_conditional_access_policy" "example" {
   }
 
   session_controls {
-    application_enforced_restrictions {
-      enabled = true
-    }
-
-    cloud_app_security {
-      enabled                 = true
-      cloud_app_security_type = "monitorOnly"
-    }
-
-    sign_in_frequency {
-      enabled = true
-      type    = "hours"
-      value   = 10
-    }
+    application_enforced_restrictions_enabled = true
+    sign_in_frequency                         = 10
+    sign_in_frequency_period                  = "hours"
+    cloud_app_security_policy                 = "monitorOnly"
   }
 }
 ```
@@ -105,9 +95,9 @@ The following arguments are supported:
 
 `applications` block supports the following:
 
-* `excluded_applications` - (Optional) A list of application IDs explicitly excluded from the policy.
-* `included_applications` - (Required) A list of application IDs the policy applies to, unless explicitly excluded (in `excluded_applications`). Can also be set to `All`.
-* `included_user_actions` - (Optional) A list of user actions to include. Supported values are `urn:user:registersecurityinfo` and `urn:user:registerdevice`.
+* `excluded_applications` - (Optional) A list of application IDs explicitly excluded from the policy. Can also be set to `Office365`.
+* `included_applications` - (Optional) A list of application IDs the policy applies to, unless explicitly excluded (in `excluded_applications`). Can also be set to `All`, `None` or `Office365`. Cannot be specified with `included_user_actions`. One of `included_applications` or `included_user_actions` must be specified.
+* `included_user_actions` - (Optional) A list of user actions to include. Supported values are `urn:user:registerdevice` and `urn:user:registersecurityinfo`. Cannot be specified with `included_applications`. One of `included_applications` or `included_user_actions` must be specified.
 
 ---
 
@@ -139,15 +129,15 @@ The following arguments are supported:
 
 `locations` block supports the following:
 
-* `excluded_locations` - (Optional) A list of location IDs excluded from scope of policy.
+* `excluded_locations` - (Optional) A list of location IDs excluded from scope of policy. Can also be set to `AllTrusted`.
 * `included_locations` - (Required) A list of location IDs in scope of policy unless explicitly excluded. Can also be set to `All`, or `AllTrusted`.
 
 ---
 
 `platforms` block supports the following:
 
-* `excluded_platforms` - (Optional) A list of platforms explicitly excluded from the policy. Possible values are: `all`, `android`, `iOS`, `macOS`, `windows`, `windowsPhone` or `unknownFutureValue`.
-* `included_platforms` - (Required) A list of platforms the policy applies to, unless explicitly excluded. Possible values are: `all`, `android`, `iOS`, `macOS`, `windows`, `windowsPhone` or `unknownFutureValue`.
+* `excluded_platforms` - (Optional) A list of platforms explicitly excluded from the policy. Possible values are: `all`, `android`, `iOS`, `linux`, `macOS`, `windows`, `windowsPhone` or `unknownFutureValue`.
+* `included_platforms` - (Required) A list of platforms the policy applies to, unless explicitly excluded. Possible values are: `all`, `android`, `iOS`, `linux`, `macOS`, `windows`, `windowsPhone` or `unknownFutureValue`.
 
 ---
 

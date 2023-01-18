@@ -137,7 +137,7 @@ func (r UserResource) Exists(ctx context.Context, clients *clients.Client, state
 		}
 		return nil, fmt.Errorf("failed to retrieve User with object ID %q: %+v", state.ID, err)
 	}
-	return utils.Bool(user.ID != nil && *user.ID == state.ID), nil
+	return utils.Bool(user.ID() != nil && *user.ID() == state.ID), nil
 }
 
 func (UserResource) basic(data acceptance.TestData) string {
@@ -171,7 +171,7 @@ resource "azuread_user" "manager" {
 }
 
 resource "azuread_user" "test" {
-  user_principal_name = "acctestUser'%[1]d@${data.azuread_domains.test.domains.0.domain_name}"
+  user_principal_name = "acctestUser'%[1]d-complete@${data.azuread_domains.test.domains.0.domain_name}"
   mail                = "acctestUser.%[1]d@hashicorp.biz"
   mail_nickname       = "acctestUser-%[1]d-MailNickname"
   other_mails         = ["acctestUser.%[1]d@hashicorp.net", "acctestUser.%[1]d@hashicorp.org"]

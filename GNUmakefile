@@ -1,5 +1,4 @@
 TEST?=$$(go list ./... |grep -v 'vendor')
-PKG_NAME=internal
 PROVIDER=azuread
 
 
@@ -17,7 +16,7 @@ tools:
 	go install github.com/bflad/tfproviderdocs@latest
 	go install github.com/katbyte/terrafmt@latest
 	go install mvdan.cc/gofumpt@latest
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$$(go env GOPATH || $$GOPATH)"/bin v1.43.0
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$$(go env GOPATH || $$GOPATH)"/bin v1.49.0
 
 build: fmtcheck
 	go install
@@ -38,7 +37,7 @@ fmtcheck:
 
 goimports:
 	@echo "==> Fixing imports code with goimports..."
-	goimports -local "github.com/hashicorp/terraform-provider-azuread" -w $(PKG_NAME)/
+	goimports -local "github.com/hashicorp/terraform-provider-azuread" -w internal/
 
 lint:
 	@echo "==> Checking source code against linters..."
@@ -53,7 +52,7 @@ tflint:
         -S021 -S022 -S023 -S024 -S025 -S026 -S027 -S028 -S029 -S030 -S031 -S032 -S033 -S034\
         -V002 -V003 -V004 -V005 -V006 -V007\
         -XR002\
-        ./$(PKG_NAME)/...
+        ./internal/...
 	@sh -c "'$(CURDIR)/scripts/terrafmt-acctests.sh'"
 
 whitespace:
@@ -88,7 +87,7 @@ debugacc: fmtcheck
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \
 		echo "ERROR: Set TEST to a specific package. For example,"; \
-		echo "  make test-compile TEST=./$(PKG_NAME)"; \
+		echo "  make test-compile TEST=./internal"; \
 		exit 1; \
 	fi
 	go test -c $(TEST) $(TESTARGS)

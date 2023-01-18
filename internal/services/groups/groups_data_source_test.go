@@ -3,14 +3,14 @@ package groups_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/manicminer/hamilton/odata"
-
 	"github.com/hashicorp/terraform-provider-azuread/internal/acceptance"
 	"github.com/hashicorp/terraform-provider-azuread/internal/acceptance/check"
 	"github.com/hashicorp/terraform-provider-azuread/internal/clients"
+	"github.com/manicminer/hamilton/odata"
 )
 
 type GroupsDataSource struct{}
@@ -25,6 +25,37 @@ func TestAccGroupsDataSource_byDisplayNames(t *testing.T) {
 			Check: resource.ComposeAggregateTestCheckFunc(
 				check.That(data.ResourceName).Key("display_names.#").HasValue("2"),
 				check.That(data.ResourceName).Key("object_ids.#").HasValue("2"),
+			),
+		},
+	})
+}
+
+func TestAccGroupsDataSource_byDisplayNamesIgnoreMissing(t *testing.T) {
+	data := acceptance.BuildTestData(t, "data.azuread_groups", "test")
+	r := GroupsDataSource{}
+
+	data.DataSourceTest(t, []resource.TestStep{
+		{
+			Config: r.byDisplayNamesIgnoreMissing(data),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				check.That(data.ResourceName).Key("display_names.#").HasValue("2"),
+				check.That(data.ResourceName).Key("object_ids.#").HasValue("2"),
+			),
+		},
+	})
+}
+
+func TestAccGroupsDataSource_byDisplayNamePrefix(t *testing.T) {
+	data := acceptance.BuildTestData(t, "data.azuread_groups", "test")
+	r := GroupsDataSource{}
+	moreThanZero := regexp.MustCompile("^[1-9][0-9]*$")
+
+	data.DataSourceTest(t, []resource.TestStep{
+		{
+			Config: r.byDisplayNamePrefix(data),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				check.That(data.ResourceName).Key("display_names.#").MatchesRegex(moreThanZero),
+				check.That(data.ResourceName).Key("object_ids.#").MatchesRegex(moreThanZero),
 			),
 		},
 	})
@@ -162,23 +193,23 @@ func testCheckGroupsDataSource(hasMailGroupsOnly, hasSecurityGroupsOnly, hasNoMa
 			if group == nil {
 				return fmt.Errorf("retrieving group with object ID %q: group was nil", oid)
 			}
-			if group.ID == nil {
+			if group.ID() == nil {
 				return fmt.Errorf("retrieving group with object ID %q: ID was nil", oid)
 			}
 			if group.DisplayName == nil {
 				return fmt.Errorf("retrieving group with object ID %q: DisplayName was nil", oid)
 			}
 			if hasMailGroupsOnly && group.MailEnabled != nil && !*group.MailEnabled {
-				return fmt.Errorf("expected only mail-enabled groups, encountered group %q (object ID: %q) which is not mail-enabled", *group.DisplayName, *group.ID)
+				return fmt.Errorf("expected only mail-enabled groups, encountered group %q (object ID: %q) which is not mail-enabled", *group.DisplayName, *group.ID())
 			}
 			if hasSecurityGroupsOnly && group.SecurityEnabled != nil && !*group.SecurityEnabled {
-				return fmt.Errorf("expected only security-enabled groups, encountered group %q (object ID: %q) which is not security-enabled", *group.DisplayName, *group.ID)
+				return fmt.Errorf("expected only security-enabled groups, encountered group %q (object ID: %q) which is not security-enabled", *group.DisplayName, *group.ID())
 			}
 			if hasNoMailGroups && group.MailEnabled != nil && *group.MailEnabled {
-				return fmt.Errorf("expected no mail-enabled groups, encountered group %q (object ID: %q) which is mail-enabled", *group.DisplayName, *group.ID)
+				return fmt.Errorf("expected no mail-enabled groups, encountered group %q (object ID: %q) which is mail-enabled", *group.DisplayName, *group.ID())
 			}
 			if hasNoSecurityGroups && group.SecurityEnabled != nil && *group.SecurityEnabled {
-				return fmt.Errorf("expected no security-enabled groups, encountered group %q (object ID: %q) which is security-enabled", *group.DisplayName, *group.ID)
+				return fmt.Errorf("expected no security-enabled groups, encountered group %q (object ID: %q) which is security-enabled", *group.DisplayName, *group.ID())
 			}
 		}
 
@@ -216,6 +247,33 @@ func (r GroupsDataSource) byDisplayNames(data acceptance.TestData) string {
 
 data "azuread_groups" "test" {
   display_names = [azuread_group.testA.display_name, azuread_group.testB.display_name]
+}
+`, r.template(data))
+}
+
+func (r GroupsDataSource) byDisplayNamesIgnoreMissing(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+%[1]s
+
+data "azuread_groups" "test" {
+  ignore_missing = true
+
+  display_names = [
+    azuread_group.testA.display_name,
+    "not-a-real-group-%[2]d",
+    azuread_group.testB.display_name,
+  ]
+}
+`, r.template(data), data.RandomInteger)
+}
+
+func (r GroupsDataSource) byDisplayNamePrefix(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+%[1]s
+
+data "azuread_groups" "test" {
+  display_name_prefix = "acctestGroup"
+  depends_on          = [azuread_group.testA, azuread_group.testB]
 }
 `, r.template(data))
 }

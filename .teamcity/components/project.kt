@@ -8,10 +8,12 @@ var services = mapOf(
         "applications" to "Applications",
         "approleassignments" to "App Role Assignments",
         "conditionalaccess" to "Conditional Access",
+        "directoryobjects" to "Directory Objects",
         "directoryroles" to "Directory Roles",
         "domains" to "Domains",
         "groups" to "Groups",
         "invitations" to "Invitations",
+        "policies" to "Policies",
         "serviceprincipals" to "Service Principals",
         "users" to "Users"
 )

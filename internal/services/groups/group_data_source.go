@@ -65,6 +65,12 @@ func groupDataSource() *schema.Resource {
 				Computed:    true,
 			},
 
+			"auto_subscribe_new_members": {
+				Description: "Indicates whether new members added to the group will be auto-subscribed to receive email notifications.",
+				Type:        schema.TypeBool,
+				Computed:    true,
+			},
+
 			"behaviors": {
 				Description: "The group behaviors for a Microsoft 365 group",
 				Type:        schema.TypeList,
@@ -98,6 +104,24 @@ func groupDataSource() *schema.Resource {
 						},
 					},
 				},
+			},
+
+			"external_senders_allowed": {
+				Description: "Indicates whether people external to the organization can send messages to the group.",
+				Type:        schema.TypeBool,
+				Computed:    true,
+			},
+
+			"hide_from_address_lists": {
+				Description: "Indicates whether the group is displayed in certain parts of the Outlook user interface: in the Address Book, in address lists for selecting message recipients, and in the Browse Groups dialog for searching groups.",
+				Type:        schema.TypeBool,
+				Computed:    true,
+			},
+
+			"hide_from_outlook_clients": {
+				Description: "Indicates whether the group is displayed in Outlook clients, such as Outlook for Windows and Outlook on the web.",
+				Type:        schema.TypeBool,
+				Computed:    true,
 			},
 
 			"mail": {
@@ -220,10 +244,10 @@ func groupDataSourceRead(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	var mailEnabled, securityEnabled *bool
-	if v, exists := d.GetOk("mail_enabled"); exists {
+	if v, exists := d.GetOkExists("mail_enabled"); exists { //nolint:staticcheck // needed to detect unset booleans
 		mailEnabled = utils.Bool(v.(bool))
 	}
-	if v, exists := d.GetOk("security_enabled"); exists {
+	if v, exists := d.GetOkExists("security_enabled"); exists { //nolint:staticcheck // needed to detect unset booleans
 		securityEnabled = utils.Bool(v.(bool))
 	}
 
@@ -284,27 +308,27 @@ func groupDataSourceRead(ctx context.Context, d *schema.ResourceData, meta inter
 		group = *g
 	}
 
-	if group.ID == nil {
+	if group.ID() == nil {
 		return tf.ErrorDiagF(errors.New("API returned group with nil object ID"), "Bad API Response")
 	}
 
-	d.SetId(*group.ID)
+	d.SetId(*group.ID())
 
 	tf.Set(d, "assignable_to_role", group.IsAssignableToRole)
-	tf.Set(d, "behaviors", tf.FlattenStringSlice(group.ResourceBehaviorOptions))
+	tf.Set(d, "behaviors", tf.FlattenStringSlicePtr(group.ResourceBehaviorOptions))
 	tf.Set(d, "description", group.Description)
 	tf.Set(d, "display_name", group.DisplayName)
 	tf.Set(d, "mail", group.Mail)
 	tf.Set(d, "mail_enabled", group.MailEnabled)
 	tf.Set(d, "mail_nickname", group.MailNickname)
-	tf.Set(d, "object_id", group.ID)
+	tf.Set(d, "object_id", group.ID())
 	tf.Set(d, "onpremises_domain_name", group.OnPremisesDomainName)
 	tf.Set(d, "onpremises_netbios_name", group.OnPremisesNetBiosName)
 	tf.Set(d, "onpremises_sam_account_name", group.OnPremisesSamAccountName)
 	tf.Set(d, "onpremises_security_identifier", group.OnPremisesSecurityIdentifier)
 	tf.Set(d, "onpremises_sync_enabled", group.OnPremisesSyncEnabled)
 	tf.Set(d, "preferred_language", group.PreferredLanguage)
-	tf.Set(d, "provisioning_options", tf.FlattenStringSlice(group.ResourceProvisioningOptions))
+	tf.Set(d, "provisioning_options", tf.FlattenStringSlicePtr(group.ResourceProvisioningOptions))
 	tf.Set(d, "proxy_addresses", tf.FlattenStringSlicePtr(group.ProxyAddresses))
 	tf.Set(d, "security_enabled", group.SecurityEnabled)
 	tf.Set(d, "theme", group.Theme)
@@ -323,6 +347,32 @@ func groupDataSourceRead(ctx context.Context, d *schema.ResourceData, meta inter
 		})
 	}
 	tf.Set(d, "dynamic_membership", dynamicMembership)
+
+	var allowExternalSenders, autoSubscribeNewMembers, hideFromAddressLists, hideFromOutlookClients bool
+	if group.GroupTypes != nil && hasGroupType(*group.GroupTypes, msgraph.GroupTypeUnified) {
+		groupExtra, err := groupGetAdditional(ctx, client, d.Id())
+		if err != nil {
+			return tf.ErrorDiagF(err, "Could not retrieve group with object ID %q", d.Id())
+		}
+
+		if groupExtra != nil && groupExtra.AllowExternalSenders != nil {
+			allowExternalSenders = *groupExtra.AllowExternalSenders
+		}
+		if groupExtra != nil && groupExtra.AutoSubscribeNewMembers != nil {
+			autoSubscribeNewMembers = *groupExtra.AutoSubscribeNewMembers
+		}
+		if groupExtra != nil && groupExtra.HideFromAddressLists != nil {
+			hideFromAddressLists = *groupExtra.HideFromAddressLists
+		}
+		if groupExtra != nil && groupExtra.HideFromOutlookClients != nil {
+			hideFromOutlookClients = *groupExtra.HideFromOutlookClients
+		}
+	}
+
+	tf.Set(d, "auto_subscribe_new_members", autoSubscribeNewMembers)
+	tf.Set(d, "external_senders_allowed", allowExternalSenders)
+	tf.Set(d, "hide_from_address_lists", hideFromAddressLists)
+	tf.Set(d, "hide_from_outlook_clients", hideFromOutlookClients)
 
 	members, _, err := client.ListMembers(ctx, d.Id())
 	if err != nil {

@@ -37,6 +37,19 @@ func TestAccGroupDataSource_byDisplayNameWithSecurity(t *testing.T) {
 	})
 }
 
+func TestAccGroupDataSource_byDisplayNameWithSecurityNotMail(t *testing.T) {
+	data := acceptance.BuildTestData(t, "data.azuread_group", "test")
+
+	data.DataSourceTest(t, []resource.TestStep{
+		{
+			Config: GroupDataSource{}.displayNameSecurityNotMail(data),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).Key("display_name").HasValue(fmt.Sprintf("acctestGroup-%d", data.RandomInteger)),
+			),
+		},
+	})
+}
+
 func TestAccGroupDataSource_byCaseInsensitiveDisplayName(t *testing.T) {
 	data := acceptance.BuildTestData(t, "data.azuread_group", "test")
 
@@ -120,6 +133,23 @@ func TestAccGroupDataSource_owners(t *testing.T) {
 	})
 }
 
+func TestAccGroupDataSource_unifiedExtraSettings(t *testing.T) {
+	data := acceptance.BuildTestData(t, "data.azuread_group", "test")
+
+	data.DataSourceTest(t, []resource.TestStep{
+		{
+			Config: GroupDataSource{}.unifiedWithExtraSettings(data),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).Key("display_name").HasValue(fmt.Sprintf("acctestGroup-%d", data.RandomInteger)),
+				check.That(data.ResourceName).Key("auto_subscribe_new_members").HasValue("true"),
+				check.That(data.ResourceName).Key("external_senders_allowed").HasValue("true"),
+				check.That(data.ResourceName).Key("hide_from_address_lists").HasValue("true"),
+				check.That(data.ResourceName).Key("hide_from_outlook_clients").HasValue("true"),
+			),
+		},
+	})
+}
+
 func (GroupDataSource) displayName(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 %[1]s
@@ -136,10 +166,22 @@ func (GroupDataSource) displayNameSecurity(data acceptance.TestData) string {
 
 data "azuread_group" "test" {
   display_name     = azuread_group.test.display_name
-  mail_enabled     = false
   security_enabled = true
 }
 `, GroupResource{}.basic(data))
+}
+
+func (GroupDataSource) displayNameSecurityNotMail(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+%[1]s
+%[2]s
+
+data "azuread_group" "test" {
+  display_name     = azuread_group.test.display_name
+  mail_enabled     = false
+  security_enabled = true
+}
+`, GroupResource{}.basic(data), GroupResource{}.basicUnified(data))
 }
 
 func (GroupDataSource) caseInsensitiveDisplayName(data acceptance.TestData) string {
@@ -201,4 +243,14 @@ data "azuread_group" "test" {
   object_id = azuread_group.test.object_id
 }
 `, GroupResource{}.withThreeOwners(data))
+}
+
+func (GroupDataSource) unifiedWithExtraSettings(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+%[1]s
+
+data "azuread_group" "test" {
+  object_id = azuread_group.test.object_id
+}
+`, GroupResource{}.unifiedWithExtraSettings(data))
 }

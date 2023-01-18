@@ -371,14 +371,14 @@ func servicePrincipalResourceCreate(ctx context.Context, d *schema.ResourceData,
 	}
 
 	if servicePrincipal != nil {
-		if servicePrincipal.ID == nil || *servicePrincipal.ID == "" {
+		if servicePrincipal.ID() == nil || *servicePrincipal.ID() == "" {
 			return tf.ErrorDiagF(fmt.Errorf("service principal returned with nil or empty object ID"), "API error")
 		}
 		if !d.Get("use_existing").(bool) {
-			return tf.ImportAsExistsDiag("azuread_service_principal", *servicePrincipal.ID)
+			return tf.ImportAsExistsDiag("azuread_service_principal", *servicePrincipal.ID())
 		}
 
-		d.SetId(*servicePrincipal.ID)
+		d.SetId(*servicePrincipal.ID())
 		return servicePrincipalResourceUpdate(ctx, d, meta)
 	}
 
@@ -421,10 +421,8 @@ func servicePrincipalResourceCreate(ctx context.Context, d *schema.ResourceData,
 	if callerObject == nil {
 		return tf.ErrorDiagF(errors.New("returned callerObject was nil"), "Could not retrieve calling principal object %q", callerId)
 	}
-	// TODO: remove this workaround for https://github.com/hashicorp/terraform-provider-azuread/issues/588
-	//if callerObject.ODataId == nil {
-	//	return tf.ErrorDiagF(errors.New("ODataId was nil"), "Could not retrieve calling principal object %q", callerId)
-	//}
+
+	// @odata.id returned by API cannot be relied upon, so construct our own
 	callerObject.ODataId = (*odata.Id)(utils.String(fmt.Sprintf("%s/v1.0/%s/directoryObjects/%s",
 		client.BaseClient.Endpoint, client.BaseClient.TenantId, callerId)))
 
@@ -437,29 +435,25 @@ func servicePrincipalResourceCreate(ctx context.Context, d *schema.ResourceData,
 	// Retrieve and set the initial owners, which can be up to 20 in total when creating the service principal
 	if v, ok := d.GetOk("owners"); ok {
 		ownerCount := 0
-		for _, ownerId := range v.(*schema.Set).List() {
-			if strings.EqualFold(ownerId.(string), callerId) {
+		for _, ownerIdRaw := range v.(*schema.Set).List() {
+			ownerId := ownerIdRaw.(string)
+
+			// If the calling principal was found in the specified owners, we won't remove them later
+			if strings.EqualFold(ownerId, callerId) {
 				removeCallerOwner = false
 				continue
 			}
-			ownerObject, _, err := directoryObjectsClient.Get(ctx, ownerId.(string), odata.Query{})
-			if err != nil {
-				return tf.ErrorDiagF(err, "Could not retrieve owner principal object %q", ownerId)
+
+			ownerObject := msgraph.DirectoryObject{
+				ODataId: (*odata.Id)(utils.String(fmt.Sprintf("%s/v1.0/%s/directoryObjects/%s",
+					client.BaseClient.Endpoint, client.BaseClient.TenantId, ownerId))),
+				Id: &ownerId,
 			}
-			if ownerObject == nil {
-				return tf.ErrorDiagF(errors.New("ownerObject was nil"), "Could not retrieve owner principal object %q", ownerId)
-			}
-			// TODO: remove this workaround for https://github.com/hashicorp/terraform-provider-azuread/issues/588
-			//if ownerObject.ODataId == nil {
-			//	return tf.ErrorDiagF(errors.New("ODataId was nil"), "Could not retrieve owner principal object %q", ownerId)
-			//}
-			ownerObject.ODataId = (*odata.Id)(utils.String(fmt.Sprintf("%s/v1.0/%s/directoryObjects/%s",
-				client.BaseClient.Endpoint, client.BaseClient.TenantId, ownerId)))
 
 			if ownerCount < 19 {
-				ownersFirst20 = append(ownersFirst20, *ownerObject)
+				ownersFirst20 = append(ownersFirst20, ownerObject)
 			} else {
-				ownersExtra = append(ownersExtra, *ownerObject)
+				ownersExtra = append(ownersExtra, ownerObject)
 			}
 			ownerCount++
 		}
@@ -473,16 +467,16 @@ func servicePrincipalResourceCreate(ctx context.Context, d *schema.ResourceData,
 		return tf.ErrorDiagF(err, "Could not create service principal")
 	}
 
-	if servicePrincipal.ID == nil || *servicePrincipal.ID == "" {
+	if servicePrincipal.ID() == nil || *servicePrincipal.ID() == "" {
 		return tf.ErrorDiagF(errors.New("Object ID returned for service principal is nil"), "Bad API response")
 	}
-	d.SetId(*servicePrincipal.ID)
+	d.SetId(*servicePrincipal.ID())
 
 	// Attempt to patch the newly created service principal with the correct description, which will tell us whether it exists yet
 	// The SDK handles retries for us here in the event of 404, 429 or 5xx, then returns after giving up
 	status, err := client.Update(ctx, msgraph.ServicePrincipal{
 		DirectoryObject: msgraph.DirectoryObject{
-			ID: servicePrincipal.ID,
+			Id: servicePrincipal.ID(),
 		},
 		Description: utils.NullableString(d.Get("description").(string)),
 	})
@@ -513,7 +507,6 @@ func servicePrincipalResourceCreate(ctx context.Context, d *schema.ResourceData,
 
 func servicePrincipalResourceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*clients.Client).ServicePrincipals.ServicePrincipalsClient
-	directoryObjectsClient := meta.(*clients.Client).ServicePrincipals.DirectoryObjectsClient
 
 	var tags []string
 	if v, ok := d.GetOk("feature_tags"); ok && len(v.([]interface{})) > 0 && d.HasChange("feature_tags") {
@@ -526,7 +519,7 @@ func servicePrincipalResourceUpdate(ctx context.Context, d *schema.ResourceData,
 
 	properties := msgraph.ServicePrincipal{
 		DirectoryObject: msgraph.DirectoryObject{
-			ID: utils.String(d.Id()),
+			Id: utils.String(d.Id()),
 		},
 		AlternativeNames:           tf.ExpandStringSlicePtr(d.Get("alternative_names").(*schema.Set).List()),
 		AccountEnabled:             utils.Bool(d.Get("account_enabled").(bool)),
@@ -558,20 +551,11 @@ func servicePrincipalResourceUpdate(ctx context.Context, d *schema.ResourceData,
 		if len(ownersToAdd) > 0 {
 			newOwners := make(msgraph.Owners, 0)
 			for _, ownerId := range ownersToAdd {
-				ownerObject, _, err := directoryObjectsClient.Get(ctx, ownerId, odata.Query{})
-				if err != nil {
-					return tf.ErrorDiagF(err, "Could not retrieve owner principal object %q", ownerId)
-				}
-				if ownerObject == nil {
-					return tf.ErrorDiagF(errors.New("returned ownerObject was nil"), "Could not retrieve owner principal object %q", ownerId)
-				}
-				// TODO: remove this workaround for https://github.com/hashicorp/terraform-provider-azuread/issues/588
-				//if ownerObject.ODataId == nil {
-				//	return tf.ErrorDiagF(errors.New("ODataId was nil"), "Could not retrieve owner principal object %q", ownerId)
-				//}
-				ownerObject.ODataId = (*odata.Id)(utils.String(fmt.Sprintf("%s/v1.0/%s/directoryObjects/%s",
-					client.BaseClient.Endpoint, client.BaseClient.TenantId, ownerId)))
-				newOwners = append(newOwners, *ownerObject)
+				newOwners = append(newOwners, msgraph.DirectoryObject{
+					ODataId: (*odata.Id)(utils.String(fmt.Sprintf("%s/v1.0/%s/directoryObjects/%s",
+						client.BaseClient.Endpoint, client.BaseClient.TenantId, ownerId))),
+					Id: &ownerId,
+				})
 			}
 
 			properties.Owners = &newOwners
@@ -631,9 +615,9 @@ func servicePrincipalResourceRead(ctx context.Context, d *schema.ResourceData, m
 	tf.Set(d, "login_url", servicePrincipal.LoginUrl)
 	tf.Set(d, "notes", servicePrincipal.Notes)
 	tf.Set(d, "notification_email_addresses", tf.FlattenStringSlicePtr(servicePrincipal.NotificationEmailAddresses))
-	tf.Set(d, "oauth2_permission_scope_ids", helpers.ApplicationFlattenOAuth2PermissionScopeIDs(servicePrincipal.PublishedPermissionScopes))
-	tf.Set(d, "oauth2_permission_scopes", helpers.ApplicationFlattenOAuth2PermissionScopes(servicePrincipal.PublishedPermissionScopes))
-	tf.Set(d, "object_id", servicePrincipal.ID)
+	tf.Set(d, "oauth2_permission_scope_ids", helpers.ApplicationFlattenOAuth2PermissionScopeIDs(servicePrincipal.OAuth2PermissionScopes))
+	tf.Set(d, "oauth2_permission_scopes", helpers.ApplicationFlattenOAuth2PermissionScopes(servicePrincipal.OAuth2PermissionScopes))
+	tf.Set(d, "object_id", servicePrincipal.ID())
 	tf.Set(d, "preferred_single_sign_on_mode", servicePrincipal.PreferredSingleSignOnMode)
 	tf.Set(d, "redirect_uris", tf.FlattenStringSlicePtr(servicePrincipal.ReplyUrls))
 	tf.Set(d, "saml_metadata_url", servicePrincipal.SamlMetadataUrl)
@@ -643,7 +627,7 @@ func servicePrincipalResourceRead(ctx context.Context, d *schema.ResourceData, m
 	tf.Set(d, "tags", servicePrincipal.Tags)
 	tf.Set(d, "type", servicePrincipal.ServicePrincipalType)
 
-	owners, _, err := client.ListOwners(ctx, *servicePrincipal.ID)
+	owners, _, err := client.ListOwners(ctx, *servicePrincipal.ID())
 	if err != nil {
 		return tf.ErrorDiagPathF(err, "owners", "Could not retrieve owners for service principal with object ID %q", d.Id())
 	}
