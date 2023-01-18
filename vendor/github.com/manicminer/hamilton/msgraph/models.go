@@ -620,7 +620,6 @@ type ConditionalAccessPolicy struct {
 type ConditionalAccessSessionControls struct {
 	ApplicationEnforcedRestrictions *ApplicationEnforcedRestrictionsSessionControl `json:"applicationEnforcedRestrictions,omitempty"`
 	CloudAppSecurity                *CloudAppSecurityControl                       `json:"cloudAppSecurity,omitempty"`
-	DisableResilienceDefaults       *DisableResilienceDefaultsSessionControl       `json:"disableResilienceDefaults,omitempty"`
 	PersistentBrowser               *PersistentBrowserSessionControl               `json:"persistentBrowser,omitempty"`
 	SignInFrequency                 *SignInFrequencySessionControl                 `json:"signInFrequency,omitempty"`
 }
@@ -688,10 +687,6 @@ type DelegatedPermissionGrant struct {
 	PrincipalId *string                              `json:"principalId,omitempty"`
 	ResourceId  *string                              `json:"resourceId,omitempty"`
 	Scopes      *[]string                            `json:"-"`
-}
-
-type DisableResilienceDefaultsSessionControl struct {
-	IsEnabled *bool `json:"isEnabled,omitempty"`
 }
 
 func (d DelegatedPermissionGrant) MarshalJSON() ([]byte, error) {
